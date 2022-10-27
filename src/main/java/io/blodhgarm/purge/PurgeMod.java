@@ -2,16 +2,12 @@ package io.blodhgarm.purge;
 
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
-import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v1.CommandRegistrationCallback;
-import net.minecraft.command.argument.EntityArgumentType;
 import net.minecraft.command.argument.EntitySummonArgumentType;
 import net.minecraft.command.suggestion.SuggestionProviders;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.passive.TameableEntity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.command.CommandManager;
@@ -19,12 +15,10 @@ import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.Text;
 import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.TypeFilter;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.registry.Registry;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.function.Predicate;
 
 public class PurgeMod implements ModInitializer {
@@ -68,7 +62,7 @@ public class PurgeMod implements ModInitializer {
 		});
 	}
 
-	private static <T extends Entity> int purgeEntities(CommandContext<ServerCommandSource> context, Identifier entityTypeId, int range, boolean muderPets){
+	private static <T extends Entity> int purgeEntities(CommandContext<ServerCommandSource> context, Identifier entityTypeId, int range, boolean murderPets){
 		ServerCommandSource source = context.getSource();
 
 		var entityType = Registry.ENTITY_TYPE.getOrEmpty(entityTypeId);
@@ -80,9 +74,11 @@ public class PurgeMod implements ModInitializer {
 		}
 
 		Predicate<Entity> testForEntity = entity -> {
-			if(muderPets) return true;
+			if(murderPets) return true;
 
 			if(entity instanceof TameableEntity tameableEntity && tameableEntity.isTamed()) return false;
+
+			if(entity.hasCustomName()) return false;
 
 			NbtCompound tag = new NbtCompound();
 

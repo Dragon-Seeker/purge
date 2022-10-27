@@ -6,15 +6,16 @@
   "name": "Purge",
   "description": "Mod that adds the purge command for safer way of killing a specific Entity Type",
   "authors": [
-    "Me!"
+    "Blodhgarm",
+    "Noaaan"
   ],
   "contact": {
-    "homepage": "https://fabricmc.net/",
-    "sources": "https://github.com/FabricMC/fabric-example-mod"
+    "homepage": "https://docs.wispforest.io/",
+    "sources": "https://github.com/Dragon-Seeker/purge"
   },
 
   "license": "CC0-1.0",
-  "icon": "assets/modid/icon.png",
+  "icon": "assets/purge/tumble_weed_bad.png",
 
   "environment": "*",
   "entrypoints": {
@@ -22,9 +23,6 @@
       "io.blodhgarm.purge.PurgeMod"
     ]
   },
-  "mixins": [
-    "modid.mixins.json"
-  ],
 
   "depends": {
     "fabricloader": ">=0.14.6",
