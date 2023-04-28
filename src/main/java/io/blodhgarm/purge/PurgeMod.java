@@ -5,17 +5,19 @@ import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
-import net.minecraft.command.argument.EntitySummonArgumentType;
+import net.minecraft.command.argument.RegistryEntryArgumentType;
 import net.minecraft.command.suggestion.SuggestionProviders;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityType;
 import net.minecraft.entity.passive.TameableEntity;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.math.Box;
-import net.minecraft.util.registry.Registry;
 
 import java.util.List;
 import java.util.function.Predicate;
@@ -28,27 +30,27 @@ public class PurgeMod implements ModInitializer {
 
 	@Override
 	public void onInitialize() {
-		CommandRegistrationCallback.EVENT.register((dispatcher, dedicated, environment) -> {
+		CommandRegistrationCallback.EVENT.register((dispatcher, access, environment) -> {
 			dispatcher.register(
 					CommandManager.literal("purge")
 							.requires(source -> source.hasPermissionLevel(2))
-							.then(CommandManager.argument(ENTITY_TYPE_ARGUMENT_KEY, EntitySummonArgumentType.entitySummon())
+							.then(CommandManager.argument(ENTITY_TYPE_ARGUMENT_KEY, RegistryEntryArgumentType.registryEntry(access, RegistryKeys.ENTITY_TYPE))
 									.suggests(SuggestionProviders.SUMMONABLE_ENTITIES)
 									.executes(context -> {
-										return purgeEntities(context, EntitySummonArgumentType.getEntitySummon(context, ENTITY_TYPE_ARGUMENT_KEY), -1, false);
+										return purgeEntities(context, RegistryEntryArgumentType.getSummonableEntityType(context, ENTITY_TYPE_ARGUMENT_KEY), -1, false);
 									})
 									.then(
 											CommandManager.argument(RANGE_ARGUMENT_KEY, IntegerArgumentType.integer(-1))
 													.executes(context -> {
 														return purgeEntities(context,
-																EntitySummonArgumentType.getEntitySummon(context, ENTITY_TYPE_ARGUMENT_KEY),
+																RegistryEntryArgumentType.getSummonableEntityType(context, ENTITY_TYPE_ARGUMENT_KEY),
 																IntegerArgumentType.getInteger(context, RANGE_ARGUMENT_KEY),
 																false
 														);
 													}).then(
 															CommandManager.argument(MURDER_PETS_KEY, BoolArgumentType.bool()).executes(context -> {
 																return purgeEntities(context,
-																		EntitySummonArgumentType.getEntitySummon(context, ENTITY_TYPE_ARGUMENT_KEY),
+																		RegistryEntryArgumentType.getSummonableEntityType(context, ENTITY_TYPE_ARGUMENT_KEY),
 																		IntegerArgumentType.getInteger(context, RANGE_ARGUMENT_KEY),
 																		BoolArgumentType.getBool(context, MURDER_PETS_KEY)
 																);
@@ -61,16 +63,10 @@ public class PurgeMod implements ModInitializer {
 		});
 	}
 
-	private static <T extends Entity> int purgeEntities(CommandContext<ServerCommandSource> context, Identifier entityTypeId, int range, boolean murderPets){
+	private static <T extends Entity> int purgeEntities(CommandContext<ServerCommandSource> context, RegistryEntry.Reference<EntityType<?>> reference, int range, boolean murderPets){
 		ServerCommandSource source = context.getSource();
 
-		var entityType = Registry.ENTITY_TYPE.getOrEmpty(entityTypeId);
-
-		if(entityType.isEmpty()){
-			source.sendError(Text.of("The given entity type was not found within the Entity Type Registry"));
-
-			return -1;
-		}
+		var entityType = Registries.ENTITY_TYPE.get(reference.registryKey());
 
 		Predicate<Entity> testForEntity = e -> {
 			if(murderPets) return true;
@@ -82,8 +78,8 @@ public class PurgeMod implements ModInitializer {
 		};
 
 		List<T> targets =  (List<T>) ((range == -1)
-				? context.getSource().getWorld().getEntitiesByType(entityType.get(), testForEntity)
-				: context.getSource().getWorld().getEntitiesByType(entityType.get(), Box.from(context.getSource().getPosition()).expand(range), testForEntity));
+				? context.getSource().getWorld().getEntitiesByType(entityType, testForEntity)
+				: context.getSource().getWorld().getEntitiesByType(entityType, Box.from(context.getSource().getPosition()).expand(range), testForEntity));
 
 		targets.forEach(Entity::kill);
 
