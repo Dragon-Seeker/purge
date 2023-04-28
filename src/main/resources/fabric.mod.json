@@ -6,8 +6,8 @@
   "name": "Purge",
   "description": "Mod that adds the purge command for safer way of killing a specific Entity Type",
   "authors": [
-    "Blodhgarm",
-    "Noaaan"
+    "Creator: Blodhgarm",
+    "Idea Man: Noaaan"
   ],
   "contact": {
     "homepage": "https://docs.wispforest.io/",
@@ -25,9 +25,9 @@
   },
 
   "depends": {
-    "fabricloader": ">=0.14.6",
+    "fabricloader": ">=0.14.19",
     "fabric": "*",
-    "minecraft": "~1.18.2",
+    "minecraft": "~1.19.2",
     "java": ">=17"
   },
   "suggests": {

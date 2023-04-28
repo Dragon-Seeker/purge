@@ -4,7 +4,7 @@ import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import net.fabricmc.api.ModInitializer;
-import net.fabricmc.fabric.api.command.v1.CommandRegistrationCallback;
+import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.command.argument.EntitySummonArgumentType;
 import net.minecraft.command.suggestion.SuggestionProviders;
 import net.minecraft.entity.Entity;
@@ -13,7 +13,6 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.registry.Registry;
@@ -29,7 +28,7 @@ public class PurgeMod implements ModInitializer {
 
 	@Override
 	public void onInitialize() {
-		CommandRegistrationCallback.EVENT.register((dispatcher, dedicated) -> {
+		CommandRegistrationCallback.EVENT.register((dispatcher, dedicated, environment) -> {
 			dispatcher.register(
 					CommandManager.literal("purge")
 							.requires(source -> source.hasPermissionLevel(2))
@@ -73,35 +72,26 @@ public class PurgeMod implements ModInitializer {
 			return -1;
 		}
 
-		Predicate<Entity> testForEntity = entity -> {
+		Predicate<Entity> testForEntity = e -> {
 			if(murderPets) return true;
 
-			if(entity instanceof TameableEntity tameableEntity && tameableEntity.isTamed()) return false;
+			if((e instanceof TameableEntity te && te.isTamed()) || e.hasCustomName()) return false;
 
-			if(entity.hasCustomName()) return false;
-
-			NbtCompound tag = new NbtCompound();
-
-			entity.writeNbt(tag);
-
-			return !tag.contains("Owner");
+			return !(e.writeNbt(new NbtCompound()))
+					.contains("Owner");
 		};
 
-		List<T> targets;
-
-		if(range == -1){
-			targets = (List<T>) context.getSource().getWorld().getEntitiesByType(entityType.get(), testForEntity);
-		} else {
-			targets = (List<T>) context.getSource().getWorld().getEntitiesByType(entityType.get(), Box.from(context.getSource().getPosition()).expand(range), testForEntity);
-		}
+		List<T> targets =  (List<T>) ((range == -1)
+				? context.getSource().getWorld().getEntitiesByType(entityType.get(), testForEntity)
+				: context.getSource().getWorld().getEntitiesByType(entityType.get(), Box.from(context.getSource().getPosition()).expand(range), testForEntity));
 
 		targets.forEach(Entity::kill);
 
-		if (targets.size() == 1) {
-			source.sendFeedback(new TranslatableText("commands.kill.success.single", targets.iterator().next().getDisplayName()), true);
-		} else {
-			source.sendFeedback(new TranslatableText("commands.kill.success.multiple", targets.size()), true);
-		}
+		Text feedbackMSG = targets.size() == 1
+				? Text.translatable("commands.kill.success.single", targets.iterator().next().getDisplayName())
+				: Text.translatable("commands.kill.success.multiple", targets.size());
+
+		source.sendFeedback(feedbackMSG, true);
 
 		return targets.size();
 	}
